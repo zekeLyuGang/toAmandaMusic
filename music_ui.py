@@ -1,16 +1,28 @@
 import os
+import random
+from datetime import datetime
 import gradio as gr
-from pathlib import Path
+import time
 import shutil
 
 MUSIC_DIR = "music"
+PHOTO_DIR = "photo"
 os.makedirs(MUSIC_DIR, exist_ok=True)
+os.makedirs(PHOTO_DIR, exist_ok=True)
+now = datetime.now()  # 获取当前日期和时间
+cur_year, cur_month, cur_day = now.year, now.month, now.day
 
 
 def get_sorted_music_files():
     """获取按字母顺序排序的音乐文件列表"""
     files = [f for f in os.listdir(MUSIC_DIR) if f.lower().endswith(('.flac', '.mp3'))]
     return sorted(files, key=str.lower)
+
+
+def get_daily_image():
+    photos = [f for f in os.listdir(PHOTO_DIR) if os.path.isfile(os.path.join(PHOTO_DIR, f))]
+    selected = random.choice(photos)
+    return os.path.join(PHOTO_DIR, selected)
 
 
 def search_music_files(query):
@@ -60,11 +72,13 @@ def rename_music(filename, new_name):
         return gr.update(choices=get_sorted_music_files()), f"文件已从 {filename} 重命名为 {new_name}!"
     return gr.update(choices=get_sorted_music_files()), "请输入新文件名"
 
+
 def download_music(filename):
     if not filename:
         return None
     file_path = os.path.join(MUSIC_DIR, filename)
     return file_path
+
 
 def play_music(filename):
     """播放音乐"""
@@ -75,6 +89,44 @@ def play_music(filename):
 
 with gr.Blocks(title="toAmandaMusic") as demo:
     gr.Markdown("# 🎵 toAmandaMusic ❥(^_-)")
+    with gr.Row():
+        with gr.Column():
+            image = gr.Image(label="可爱贝贝", value=get_daily_image, height=500)
+
+        with gr.Column():
+            gr.Markdown(f"""
+            ## 今天是{cur_year}年{cur_month}月{cur_day}日\n
+            ### 小刚刚想对小贝贝说的:\n
+
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            **❤️❤️我爱你❤️❤️**\n
+                            
+            """, elem_classes="panel")
+
+    with gr.Tab("播放音乐"):
+        with gr.Row():
+            search_play_box = gr.Textbox(
+                label="搜索播放的音乐",
+                placeholder="输入歌曲名关键词..."
+            )
+            search_play_btn = gr.Button("搜索", variant="primary")
+
+        music_play_list = gr.Radio(
+            label="选择要播放的音乐",
+            choices=get_sorted_music_files(),
+            interactive=True
+        )
+        play_btn = gr.Button("播放", variant="primary")
+        audio_player = gr.Audio(label="播放器", interactive=False)
+        download_btn = gr.Button("下载", variant="primary")
 
     with gr.Tab("上传音乐"):
         with gr.Row():
@@ -106,23 +158,6 @@ with gr.Blocks(title="toAmandaMusic") as demo:
         # 删除按钮
         batch_delete_btn = gr.Button("删除勾选的文件", variant="stop")
         manage_status = gr.Textbox(label="操作状态")
-
-    with gr.Tab("下载音乐"):
-        with gr.Row():
-            search_play_box = gr.Textbox(
-                label="搜索播放的音乐",
-                placeholder="输入歌曲名关键词..."
-            )
-            search_play_btn = gr.Button("搜索", variant="primary")
-
-        music_play_list = gr.Radio(
-            label="选择要播放的音乐",
-            choices=get_sorted_music_files(),
-            interactive=True
-        )
-        play_btn = gr.Button("播放", variant="primary")
-        audio_player = gr.Audio(label="播放器", interactive=False)
-        download_btn = gr.Button("下载", variant="primary")
 
     # 事件绑定
     upload_btn.click(
@@ -166,6 +201,7 @@ with gr.Blocks(title="toAmandaMusic") as demo:
         outputs=gr.File(label="下载文件")  # 输出为文件类型，自动触发下载
     )
 
+
     # 更新所有音乐列表的通用函数
     def update_all_lists():
         files = get_sorted_music_files()
@@ -173,7 +209,6 @@ with gr.Blocks(title="toAmandaMusic") as demo:
             gr.update(choices=files),  # 管理页列表
             gr.update(choices=files)  # 播放页列表
         ]
-
 
 
     # 当上传或删除操作后更新所有列表
@@ -184,4 +219,8 @@ with gr.Blocks(title="toAmandaMusic") as demo:
         )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=8000)
+    demo.launch(
+        allowed_paths=["./photo"],
+        server_name="0.0.0.0",
+        server_port=8000
+    )

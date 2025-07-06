@@ -1,9 +1,11 @@
 import os
 import random
+import shutil
 from datetime import datetime
 import gradio as gr
-import time
-import shutil
+
+from setting import DEEPSEEK_KEY,SYSTEM_PROMPT,USER_PROMPT
+from openai import OpenAI
 
 MUSIC_DIR = "music"
 PHOTO_DIR = "photo"
@@ -11,6 +13,7 @@ os.makedirs(MUSIC_DIR, exist_ok=True)
 os.makedirs(PHOTO_DIR, exist_ok=True)
 now = datetime.now()  # 获取当前日期和时间
 cur_year, cur_month, cur_day = now.year, now.month, now.day
+client = OpenAI(api_key=DEEPSEEK_KEY, base_url="https://api.deepseek.com")
 
 
 def get_sorted_music_files():
@@ -24,6 +27,26 @@ def get_daily_image():
     selected = random.choice(photos)
     return os.path.join(PHOTO_DIR, selected)
 
+
+def get_daily_love_poetry():
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": f"{SYSTEM_PROMPT}"},
+                {"role": "user", "content": f"今天是{cur_year}年，{cur_month}月，{cur_day}日，{USER_PROMPT}"},
+            ],
+            stream=False
+        )
+        current_poetry = response.choices[0].message.content.replace("\n", "<br>")  # 替换所有换行符
+    except Exception as e:
+        print(f"❌连接deepseek失败：{str(e)}")
+        current_poetry = "不论晴空万里，还是乌云密布，我的心始终为你跳动~"
+    return current_poetry
+
+def on_page_load():
+    new_poetry = get_daily_love_poetry()
+    return f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小贝贝说:\n\n{new_poetry}"
 
 def search_music_files(query):
     """搜索音乐文件"""
@@ -91,25 +114,20 @@ with gr.Blocks(title="toAmandaMusic") as demo:
     gr.Markdown("# 🎵 toAmandaMusic ❥(^_-)")
     with gr.Row():
         with gr.Column():
-            image = gr.Image(label="可爱贝贝", value=get_daily_image, height=500)
+            image = gr.Image(label="可爱佩佩", value=get_daily_image, height=500)
 
         with gr.Column():
-            gr.Markdown(f"""
-            ## 今天是{cur_year}年{cur_month}月{cur_day}日\n
-            ### 小刚刚想对小贝贝说:\n
+            cur_love_poetry = get_daily_love_poetry()
+            poetry_display = gr.Markdown(f"""
+            ### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚正在想今天要对小佩佩说什么！",
+          
+            """, elem_classes="panel", height=500)
 
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n
-                                                        ❤️❤️❤️❤️我爱你❤️❤️❤️❤️\n            
-            """, elem_classes="panel")
+    # 监听页面加载事件
+    demo.load(
+        fn=on_page_load,
+        outputs=poetry_display
+    )
 
     with gr.Tab("播放音乐"):
         with gr.Row():

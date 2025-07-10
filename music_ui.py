@@ -95,7 +95,7 @@ def on_page_load():
     new_love_poetry = new_data["love_poetry"]
     new_photo_path = new_data["photo_path"]
     return (
-        f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小贝贝说:\n\n{new_love_poetry}",
+        f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小佩佩说:\n\n{new_love_poetry}",
         new_photo_path
     )
 

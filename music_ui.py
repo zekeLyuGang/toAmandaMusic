@@ -157,9 +157,9 @@ def download_music(filename):
 
 def play_music(filename):
     """播放音乐"""
-    if filename:
-        return os.path.join(MUSIC_DIR, filename)
-    return None
+    if not filename:
+        return None
+    return os.path.join(MUSIC_DIR, filename)
 
 
 with gr.Blocks(title="toAmandaMusic") as demo:
@@ -199,7 +199,12 @@ with gr.Blocks(title="toAmandaMusic") as demo:
             interactive=True
         )
         play_btn = gr.Button("播放", variant="primary")
-        audio_player = gr.Audio(label="播放器", interactive=False)
+        audio_player = gr.Audio(
+            label="播放器",
+            streaming=True,  # 启用流式传输
+            autoplay=True,  # 自动播放
+            interactive=False
+        )
         download_btn = gr.Button("下载", variant="primary")
 
     with gr.Tab("上传音乐"):
@@ -267,7 +272,7 @@ with gr.Blocks(title="toAmandaMusic") as demo:
     play_btn.click(
         play_music,
         inputs=[music_play_list],
-        outputs=[audio_player]
+        outputs=audio_player
     )
     download_btn.click(
         fn=download_music,

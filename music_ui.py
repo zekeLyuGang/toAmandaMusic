@@ -1,10 +1,14 @@
+import json
 import os
 import random
 import shutil
+import time
 from datetime import datetime
 import gradio as gr
+import schedule
+from threading import Thread
 
-from setting import DEEPSEEK_KEY,SYSTEM_PROMPT,USER_PROMPT
+from setting import DEEPSEEK_KEY, SYSTEM_PROMPT, USER_PROMPT
 from openai import OpenAI
 
 MUSIC_DIR = "music"
@@ -20,6 +24,47 @@ def get_sorted_music_files():
     """获取按字母顺序排序的音乐文件列表"""
     files = [f for f in os.listdir(MUSIC_DIR) if f.lower().endswith(('.flac', '.mp3'))]
     return sorted(files, key=str.lower)
+
+
+def load_from_json():
+    try:
+        if not os.path.exists("data.json"):
+            raise FileNotFoundError(f"文件 data.json 不存在")
+        with open("data.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print("错误：JSON格式无效")
+    except Exception as e:
+        print(f"读取失败: {str(e)}")
+    return None
+
+
+def save_json_content(data):
+    try:
+        with open("data.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        print("成功保存到 data.json")
+    except Exception as e:
+        print(f"保存失败：{str(e)}")
+
+
+# 定时任务函数（模拟数据更新）
+def dayliy_update():
+    photo_path = get_daily_image()
+    cur_love_poetry = get_daily_love_poetry()
+    new_data = {
+        "photo_path": photo_path,
+        "love_poetry": cur_love_poetry
+    }
+    save_json_content(new_data)
+    print("已完成定时更新")
+
+
+def run_scheduler():
+    schedule.every(1).day.at("02:00").do(dayliy_update)  # 每天执行一次
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 def get_daily_image():
@@ -44,9 +89,16 @@ def get_daily_love_poetry():
         current_poetry = "不论晴空万里，还是乌云密布，我的心始终为你跳动~"
     return current_poetry
 
+
 def on_page_load():
-    new_poetry = get_daily_love_poetry()
-    return f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小贝贝说:\n\n{new_poetry}"
+    new_data = load_from_json()
+    new_love_poetry = new_data["love_poetry"]
+    new_photo_path = new_data["photo_path"]
+    return (
+        f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小贝贝说:\n\n{new_love_poetry}",
+        new_photo_path
+    )
+
 
 def search_music_files(query):
     """搜索音乐文件"""
@@ -112,22 +164,26 @@ def play_music(filename):
 
 with gr.Blocks(title="toAmandaMusic") as demo:
     gr.Markdown("# 🎵 toAmandaMusic ❥(^_-)")
+    data = load_from_json()
+    photo_path = data["photo_path"]
+    love_poetry = data["love_poetry"]
     with gr.Row():
         with gr.Column():
-            image = gr.Image(label="可爱佩佩", value=get_daily_image, height=500)
+            image = gr.Image(label="可爱佩佩", value=photo_path, height=500)
 
         with gr.Column():
             cur_love_poetry = get_daily_love_poetry()
             poetry_display = gr.Markdown(f"""
-            ### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚正在想今天要对小佩佩说什么！",
+            ### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小佩佩说：\n
+            {cur_love_poetry}
           
             """, elem_classes="panel", height=500)
-
-    # 监听页面加载事件
+        # 监听页面加载事件
     demo.load(
         fn=on_page_load,
-        outputs=poetry_display
+        outputs=[poetry_display, image]  # 同时刷新情诗和照片
     )
+
 
     with gr.Tab("播放音乐"):
         with gr.Row():
@@ -237,6 +293,9 @@ with gr.Blocks(title="toAmandaMusic") as demo:
         )
 
 if __name__ == "__main__":
+    scheduler_thread = Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    # 启动gradio界面
     demo.launch(
         allowed_paths=["./photo"],
         server_name="0.0.0.0",

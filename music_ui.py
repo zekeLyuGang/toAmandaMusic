@@ -61,7 +61,7 @@ def dayliy_update():
 
 
 def run_scheduler():
-    schedule.every(1).day.at("02:00").do(dayliy_update)  # 每天执行一次
+    schedule.every(1).day.do(dayliy_update)  # 每天执行一次
     while True:
         schedule.run_pending()
         time.sleep(1)

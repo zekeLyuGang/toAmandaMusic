@@ -15,8 +15,6 @@ MUSIC_DIR = "music"
 PHOTO_DIR = "photo"
 os.makedirs(MUSIC_DIR, exist_ok=True)
 os.makedirs(PHOTO_DIR, exist_ok=True)
-now = datetime.now()  # 获取当前日期和时间
-cur_year, cur_month, cur_day = now.year, now.month, now.day
 client = OpenAI(api_key=DEEPSEEK_KEY, base_url="https://api.deepseek.com")
 
 
@@ -50,8 +48,11 @@ def save_json_content(data):
 
 # 定时任务函数（模拟数据更新）
 def dayliy_update():
+    now = datetime.now()  # 获取当前日期和时间
+    cur_year, cur_month, cur_day = now.year, now.month, now.day
     photo_path = get_daily_image()
-    cur_love_poetry = get_daily_love_poetry()
+    cur_love_poetry = get_daily_love_poetry(cur_year, cur_month, cur_day)
+    cur_love_poetry=f"""### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小佩佩说：\n{cur_love_poetry}"""
     new_data = {
         "photo_path": photo_path,
         "love_poetry": cur_love_poetry
@@ -73,7 +74,7 @@ def get_daily_image():
     return os.path.join(PHOTO_DIR, selected)
 
 
-def get_daily_love_poetry():
+def get_daily_love_poetry(cur_year, cur_month, cur_day):
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
@@ -95,7 +96,7 @@ def on_page_load():
     new_love_poetry = new_data["love_poetry"]
     new_photo_path = new_data["photo_path"]
     return (
-        f"### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小佩佩说:\n\n{new_love_poetry}",
+        new_love_poetry,
         new_photo_path
     )
 
@@ -172,18 +173,14 @@ with gr.Blocks(title="toAmandaMusic") as demo:
             image = gr.Image(label="可爱佩佩", value=photo_path, height=500)
 
         with gr.Column():
-            cur_love_poetry = get_daily_love_poetry()
             poetry_display = gr.Markdown(f"""
-            ### 今天是{cur_year}年{cur_month}月{cur_day}日,小刚刚想对小佩佩说：\n
-            {cur_love_poetry}
-          
+            {love_poetry}
             """, elem_classes="panel", height=500)
         # 监听页面加载事件
     demo.load(
         fn=on_page_load,
         outputs=[poetry_display, image]  # 同时刷新情诗和照片
     )
-
 
     with gr.Tab("播放音乐"):
         with gr.Row():
@@ -300,6 +297,7 @@ with gr.Blocks(title="toAmandaMusic") as demo:
 if __name__ == "__main__":
     scheduler_thread = Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
+    dayliy_update()
     # 启动gradio界面
     demo.launch(
         allowed_paths=["./photo"],

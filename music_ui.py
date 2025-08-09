@@ -8,7 +8,8 @@ import gradio as gr
 import schedule
 from threading import Thread
 
-from setting import DEEPSEEK_KEY, SYSTEM_PROMPT, USER_PROMPT
+from setting import DEEPSEEK_KEY, USER_PROMPT, ZEKE_BIRTHDAY, AMANDA_BIRTHDAY, ENCOUNTER_DAY, DATING_DAY, MARRIAGE_DAY, \
+    HEBE_DAY
 from openai import OpenAI
 
 MUSIC_DIR = "music"
@@ -75,6 +76,15 @@ def get_daily_image():
 
 
 def get_daily_love_poetry(cur_year, cur_month, cur_day):
+    SYSTEM_PROMPT = f"""
+    刚刚的生日是{ZEKE_BIRTHDAY}，佩佩的生日是{AMANDA_BIRTHDAY}，他们两个相遇的日期是{ENCOUNTER_DAY}，确定恋爱关系的日期是{DATING_DAY}，
+    结婚的日期是{MARRIAGE_DAY},他们的女儿禾宝的出身日期是{HEBE_DAY}。
+    今天距离他们相遇过去了{(datetime.now() - ENCOUNTER_DAY).days}天，距离他们确定恋爱关系过去了{(datetime.now() - DATING_DAY).days}天，
+    距离他们结婚过去了{(datetime.now() - MARRIAGE_DAY).days}天，距离他们女儿出生过去了{(datetime.now() - HEBE_DAY).days}天。
+    请根据提供的信息写100-200字左右的刚刚给佩佩的情话，不要虚构细节。
+    请在相遇、确定恋爱关系、结婚、女儿出生过去的天数中选择一个提及，如果四个中有整数或者比较特殊的数字，就优先选择。
+    今天的日期是{datetime.now()},如果今天是个特殊的日子，如情人节，圣诞节，除夕，春节，国庆，中秋等，也请提及，并使回答带有节日特色风格
+    """
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
